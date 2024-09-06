@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 using System.Text.Json;
 
 
-string headerCookie;
+string headerCookie = string.Empty;
 string baseUrl = "http://localhost:50/";
 string filePath = "C:\\Users\\Vibin.KolothVerghese\\Downloads\\VibinTest.zip";
 BeginCustomizationProcess();
@@ -20,6 +20,7 @@ void BeginCustomizationProcess()
     //UploadPackageAsync().Wait();
     //PublishPackageAsync().Wait();
     //PublishPackageEndAsync().Wait();
+    UnpublishAllAsync().Wait();
     LogoutRequestAsync().Wait();
     Console.ReadLine();
 }
@@ -192,6 +193,28 @@ async Task PublishPackageEndAsync()
     catch (Exception ex)
     {
 
+    }
+}
+
+async Task UnpublishAllAsync()
+{
+    var client = GetHttpClient("CustomizationApi/unpublishAll");
+    using StringContent jsonContent = new(System.Text.Json.JsonSerializer.Serialize(new {
+        tenantMode = "All"
+    }), Encoding.UTF8,
+        "application/json");
+
+    var request = new HttpRequestMessage
+    {
+        Method = HttpMethod.Post,
+        RequestUri = new Uri(client?.BaseAddress.AbsoluteUri),
+        Content = jsonContent
+    };
+    request.Headers.Add("Cookie", headerCookie);
+    using (var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+    {
+        response.EnsureSuccessStatusCode();
+        Console.WriteLine(await response.Content.ReadAsStringAsync());
     }
 }
 
