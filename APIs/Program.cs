@@ -44,7 +44,7 @@ async Task LoginRequestAsync()
     using StringContent jsonContent = new(System.Text.Json.JsonSerializer.Serialize(new
     {
         name = "admin",
-        password = "Vibin@Das@1980", //set the password
+        password = "", //set the password
         company = "",
         branch = ""
     }), Encoding.UTF8,
