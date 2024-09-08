@@ -17,10 +17,11 @@ void BeginCustomizationProcess()
     LoginRequestAsync().Wait();
     //GetPackagesAsync().Wait();
     //var result = ValidatePackageAsync().Result;
+    ValidatePackageAsync().Wait();
     //UploadPackageAsync().Wait();
     //PublishPackageAsync().Wait();
     //PublishPackageEndAsync().Wait();
-    UnpublishAllAsync().Wait();
+    //UnpublishAllAsync().Wait();
     LogoutRequestAsync().Wait();
     Console.ReadLine();
 }
@@ -43,7 +44,7 @@ async Task LoginRequestAsync()
     using StringContent jsonContent = new(System.Text.Json.JsonSerializer.Serialize(new
     {
         name = "admin",
-        password = "", //set the password
+        password = "Vibin@Das@1980", //set the password
         company = "",
         branch = ""
     }), Encoding.UTF8,
@@ -107,7 +108,7 @@ async Task UploadPackageAsync()
 }
 
 //Validate Package
-async Task<bool> ValidatePackageAsync()
+async Task ValidatePackageAsync()
 {
     var client = GetHttpClient("CustomizationApi/PublishBegin");
     using StringContent jsonContent = new(System.Text.Json.JsonSerializer.Serialize(new
@@ -132,14 +133,7 @@ async Task<bool> ValidatePackageAsync()
     var response = await client.SendAsync(request);
     response.EnsureSuccessStatusCode();
     Console.WriteLine(await response.Content.ReadAsStringAsync());
-    if (response.StatusCode == System.Net.HttpStatusCode.OK)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    WaitForPublishingCompletion();
 }
 
 //Publish Package
@@ -171,11 +165,10 @@ async Task PublishPackageAsync()
 }
 
 //Publish Package End
-async Task PublishPackageEndAsync()
+async Task<Root> PublishPackageEndAsync()
 {
-    try
-    {
         var client = GetHttpClient("CustomizationApi/publishEnd");
+        Root val = null;
         var request = new HttpRequestMessage
         {
             Method = HttpMethod.Post,
@@ -186,15 +179,38 @@ async Task PublishPackageEndAsync()
         using (var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
         {
             response.EnsureSuccessStatusCode();
-            Root val = JsonSerializer.Deserialize<Root>(await response.Content.ReadAsStringAsync());            
+            val = await response.Content.ReadFromJsonAsync<Root>();
         }
-            
-    }
-    catch (Exception ex)
-    {
+        return val;
+}
 
+
+void WaitForPublishingCompletion(int millisecondsInterval = 2000)
+{
+    while (true)
+    {
+        var processResult = PublishPackageEndAsync().Result;
+        if (processResult.log.Count > 0)
+        {
+            Console.WriteLine(processResult.log.LastOrDefault()?.message);
+        }
+
+        if (processResult.isCompleted)
+        {
+            return;
+        }
+        else if (processResult.isFailed)
+        {
+            StringBuilder log = new StringBuilder();
+            throw new Exception(log.ToString());
+        }
+        else
+        {
+            Thread.Sleep(millisecondsInterval);
+        }
     }
 }
+
 
 async Task UnpublishAllAsync()
 {
